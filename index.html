@@ -3,13 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador de Cartão de Crédito e Pix PRO</title>
-    <!-- Biblioteca externa para gerar QR Codes dinamicamente via JS -->
+    <title>Simulador de Cartão de Crédito e Pix Real</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        /* ==========================================================================
-           1. CONFIGURAÇÕES GERAIS E VARIÁVEIS DE CORES
-           ========================================================================== */
         :root {
             --bg-principal: #0f172a;
             --bg-card: #1e293b;
@@ -24,377 +20,74 @@
             --borda: #334155;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg-principal); color: var(--text-principal); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .container { width: 100%; max-width: 900px; display: grid; grid-template-columns: 1fr; gap: 30px; }
+        @media (min-width: 768px) { .container { grid-template-columns: 1fr 1fr; align-items: start; } }
 
-        body {
-            background-color: var(--bg-principal);
-            color: var(--text-principal);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
+        .painel-esquerdo { display: flex; flex-direction: column; gap: 20px; }
+        .cartao-credito { background: var(--gradiente-cartao); border-radius: 20px; padding: 25px; height: 220px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5); position: relative; overflow: hidden; }
+        .cartao-topo { display: flex; justify-content: space-between; align-items: center; }
+        .banco-nome { font-size: 1.1rem; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; }
+        .chip { width: 45px; height: 35px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 6px; }
+        .cartao-numero { font-size: 1.25rem; letter-spacing: 2px; margin-top: 15px; text-shadow: 1px 1px 2px rgba(0,0,0,0.4); }
+        .cartao-dados { display: flex; justify-content: space-between; align-items: flex-end; }
+        .titular-label { font-size: 0.7rem; color: rgba(255, 255, 255, 0.7); text-transform: uppercase; margin-bottom: 2px; }
+        .titular-nome { font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; }
+        .bandeira { font-size: 1.4rem; font-style: italic; font-weight: bold; }
 
-        .container {
-            width: 100%;
-            max-width: 900px;
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 30px;
-        }
-
-        @media (min-width: 768px) {
-            .container {
-                grid-template-columns: 1fr 1fr;
-                align-items: start;
-            }
-        }
-
-        /* ==========================================================================
-           2. INTERFACE DO CARTÃO E VALORES
-           ========================================================================== */
-        .painel-esquerdo {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .cartao-credito {
-            background: var(--gradiente-cartao);
-            border-radius: 20px;
-            padding: 25px;
-            height: 220px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .cartao-credito::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
-            transform: rotate(30deg);
-            pointer-events: none;
-        }
-
-        .cartao-topo {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .banco-nome {
-            font-size: 1.1rem;
-            font-weight: bold;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        .chip {
-            width: 45px;
-            height: 35px;
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            border-radius: 6px;
-            position: relative;
-        }
-
-        .cartao-numero {
-            font-size: 1.25rem;
-            letter-spacing: 2px;
-            margin-top: 15px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
-            white-space: nowrap;
-        }
-
-        .cartao-dados {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-        }
-
-        .titular-label {
-            font-size: 0.7rem;
-            color: rgba(255, 255, 255, 0.7);
-            text-transform: uppercase;
-            margin-bottom: 2px;
-        }
-
-        .titular-nome {
-            font-size: 1rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .bandeira {
-            font-size: 1.4rem;
-            font-style: italic;
-            font-weight: bold;
-        }
-
-        .painel-valores {
-            background-color: var(--bg-card);
-            border: 1px solid var(--borda);
-            border-radius: 16px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .valor-box {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 10px;
-            border-bottom: 1px solid var(--borda);
-        }
-
-        .valor-box:last-child {
-            border-bottom: none;
-            padding-bottom: 0;
-        }
-
-        .valor-label {
-            color: var(--text-secundario);
-            font-size: 0.9rem;
-        }
-
-        .valor-numero {
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-
+        .painel-valores { background-color: var(--bg-card); border: 1px solid var(--borda); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .valor-box { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--borda); }
+        .valor-box:last-child { border-bottom: none; padding-bottom: 0; }
+        .valor-label { color: var(--text-secundario); font-size: 0.9rem; }
+        .valor-numero { font-size: 1.2rem; font-weight: bold; }
         .cor-limite { color: var(--cor-sucesso); }
         .cor-fatura { color: var(--cor-erro); }
 
-        /* ==========================================================================
-           3. FORMULÁRIO DE OPERAÇÕES
-           ========================================================================== */
-        .painel-direito {
-            background-color: var(--bg-card);
-            border: 1px solid var(--borda);
-            border-radius: 16px;
-            padding: 25px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            height: 100%;
-        }
+        .painel-direito { background-color: var(--bg-card); border: 1px solid var(--borda); border-radius: 16px; padding: 25px; display: flex; flex-direction: column; gap: 20px; }
+        h2 { font-size: 1.3rem; margin-bottom: 5px; }
+        .form-grupo { display: flex; flex-direction: column; gap: 8px; }
+        label { font-size: 0.85rem; color: var(--text-secundario); }
+        input, select { background-color: var(--bg-principal); border: 1px solid var(--borda); color: var(--text-principal); padding: 12px; border-radius: 8px; font-size: 1rem; outline: none; }
+        .form-linha { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+       
+        .btn { color: white; border: none; padding: 14px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: all 0.2s; width: 100%; }
+        .btn-processar { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .btn-secundario { background-color: transparent; border: 1px solid var(--borda); color: var(--text-secundario); }
+        .btn-secundario:hover { background-color: rgba(255, 255, 255, 0.05); color: var(--text-principal); }
 
-        h2 {
-            font-size: 1.3rem;
-            margin-bottom: 5px;
-            color: var(--text-principal);
-        }
+        .mensagem { padding: 12px; border-radius: 8px; font-size: 0.9rem; display: none; text-align: center; font-weight: 500; }
+        .mensagem.sucesso { display: block; background-color: rgba(16, 185, 129, 0.15); color: var(--cor-sucesso); border: 1px solid var(--cor-sucesso); }
+        .mensagem.erro { display: block; background-color: rgba(239, 68, 68, 0.15); color: var(--cor-erro); border: 1px solid var(--cor-erro); }
 
-        .form-grupo {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        label {
-            font-size: 0.85rem;
-            color: var(--text-secundario);
-        }
-
-        input, select {
-            background-color: var(--bg-principal);
-            border: 1px solid var(--borda);
-            color: var(--text-principal);
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 1rem;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        input:focus, select:focus {
-            border-color: var(--cor-destaque);
-        }
-
-        .form-linha {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        .btn {
-            background-color: var(--cor-destaque);
-            color: white;
-            border: none;
-            padding: 14px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn:hover { background-color: var(--cor-destaque-hover); }
-        .btn:active { transform: scale(0.98); }
-
-        .btn-processar {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        }
-        .btn-processar:hover {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-        }
-
-        .btn-secundario {
-            background-color: transparent;
-            border: 1px solid var(--borda);
-            color: var(--text-secundario);
-            margin-top: -5px;
-        }
-
-        .btn-secundario:hover {
-            background-color: rgba(255, 255, 255, 0.05);
-            color: var(--text-principal);
-        }
-
-        .mensagem {
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            display: none;
-            text-align: center;
-            font-weight: 500;
-        }
-
-        .mensagem.sucesso {
-            display: block;
-            background-color: rgba(16, 185, 129, 0.15);
-            color: var(--cor-sucesso);
-            border: 1px solid var(--cor-sucesso);
-        }
-
-        .mensagem.erro {
-            display: block;
-            background-color: rgba(239, 68, 68, 0.15);
-            color: var(--cor-erro);
-            border: 1px solid var(--cor-erro);
-        }
-
-        .historico-container {
-            margin-top: 10px;
-        }
-
-        .lista-transacoes {
-            list-style: none;
-            max-height: 150px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            padding-right: 5px;
-        }
-
-        .lista-transacoes::-webkit-scrollbar { width: 6px; }
-        .lista-transacoes::-webkit-scrollbar-thumb { background-color: var(--borda); border-radius: 3px; }
-
-        .transacao-item {
-            background-color: var(--bg-principal);
-            border: 1px solid var(--borda);
-            padding: 10px 12px;
-            border-radius: 6px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.85rem;
-        }
-
+        .lista-transacoes { list-style: none; max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .transacao-item { background-color: var(--bg-principal); border: 1px solid var(--borda); padding: 10px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
         .transacao-info { display: flex; flex-direction: column; gap: 2px; }
-        .transacao-estabelecimento { font-weight: bold; }
         .transacao-metodo { font-size: 0.75rem; font-weight: 500; }
         .metodo-cartao { color: var(--cor-destaque); }
         .metodo-pix { color: var(--cor-pix); }
-        .transacao-data { color: var(--text-secundario); font-size: 0.75rem; }
-        .transacao-valores { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-        .transacao-valor { font-weight: bold; }
 
-        /* ==========================================================================
-           4. MODAL VISUAL DO QR CODE PIX (TELA FLUTUANTE)
-           ========================================================================== */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
-            display: flex; justify-content: center; align-items: center;
-            z-index: 1000;
-            opacity: 0; pointer-events: none;
-            transition: opacity 0.3s ease;
-        }
-
-        .modal-overlay.ativo {
-            opacity: 1; pointer-events: auto;
-        }
-
-        .modal-conteudo {
-            background-color: var(--bg-card);
-            border: 1px solid var(--borda);
-            padding: 30px;
-            border-radius: 20px;
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
-        }
-
-        .pix-header {
-            display: flex; align-items: center; gap: 10px;
-            color: var(--cor-pix); font-weight: bold; font-size: 1.2rem;
-        }
-
-        #qrcode-box {
-            background-color: white;
-            padding: 15px;
-            border-radius: 12px;
-            display: inline-block;
-        }
-
-        .btn-pix-simular {
-            background-color: var(--cor-pix);
-            width: 100%;
-        }
-        .btn-pix-simular:hover {
-            background-color: #289186;
-        }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .modal-overlay.ativo { opacity: 1; pointer-events: auto; }
+        .modal-conteudo { background-color: var(--bg-card); border: 1px solid var(--borda); padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        #qrcode-box { background-color: white; padding: 15px; border-radius: 12px; display: inline-block; min-height: 210px; min-width: 210px; }
+        .btn-pix-simular { background-color: var(--cor-pix); }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <!-- PAINEL ESQUERDO (INTERFACE DO CARTÃO) -->
         <div class="painel-esquerdo">
             <div class="cartao-credito">
                 <div class="cartao-topo">
                     <span class="banco-nome">DevBank Code</span>
                     <div class="chip"></div>
                 </div>
-                <!-- NÚMERO EXIBIDO POR COMPLETO -->
                 <div class="cartao-numero">4532 8192 3041 8841</div>
                 <div class="cartao-dados">
                     <div>
-                        <div class="titular-label">Jailson Freire dos Santos</div>                       <!-- NOME CORRIGIDO AQUI EMBAIXO -->
-                        <div class="titular-nome">TITULAR DO CARTÃO</div>
+                        <div class="titular-label">Titular do Cartão</div>
+                        <div class="titular-nome">Jailson Freire dos Santos</div>
                     </div>
                     <div class="bandeira">VISA</div>
                 </div>
@@ -416,11 +109,10 @@
             </div>
         </div>
 
-        <!-- PAINEL DIREITO -->
         <div class="painel-direito">
             <div>
-                <h2>Simulador de Transações Multimeios</h2>
-                <p style="color: var(--text-secundario); font-size: 0.85rem;">Simule pagamentos físicos por aproximação ou via QR Code Pix.</p>
+                <h2>Simulador de Transações Integrado</h2>
+                <p style="color: var(--text-secundario); font-size: 0.85rem;">Gere Pix reais integrados com a API do Asaas.</p>
             </div>
 
             <div id="caixa-mensagem" class="mensagem"></div>
@@ -434,11 +126,11 @@
                 <label for="select-metodo">Forma de Pagamento</label>
                 <select id="select-metodo">
                     <option value="cartao">Cartão de Crédito (Aproximação NFC)</option>
-                    <option value="pix">Pix (Gerar QR Code Dinâmico)</option>
+                    <option value="pix">Pix (Gerar Pix de Verdade via API)</option>
                 </select>
             </div>
 
-            <div class="form-linha" id="linha-parcelas">
+            <div class="form-linha">
                 <div class="form-grupo">
                     <label for="input-valor">Valor Total (R$)</label>
                     <input type="number" id="input-valor" placeholder="0.00" step="0.01" min="0.01">
@@ -449,9 +141,6 @@
                         <option value="1">À vista</option>
                         <option value="2">2x sem juros</option>
                         <option value="3">3x sem juros</option>
-                        <option value="4">4x sem juros</option>
-                        <option value="6">6x sem juros</option>
-                        <option value="12">12x sem juros</option>
                     </select>
                 </div>
             </div>
@@ -460,99 +149,73 @@
             <button class="btn btn-secundario" id="btn-pagar">Pagar Fatura / Resetar</button>
 
             <div class="historico-container">
-                <h2 style="font-size: 1rem; margin-bottom: 10px;">Histórico de Compras Aprovadas</h2>
+                <h2 style="font-size: 1rem; margin-bottom: 10px;">Histórico de Compras</h2>
                 <ul class="lista-transacoes" id="lista-compras"></ul>
             </div>
         </div>
     </div>
 
-    <!-- WINDOW MODAL DO PIX -->
+    <!-- MODAL DO PIX -->
     <div class="modal-overlay" id="modal-pix">
         <div class="modal-conteudo">
-            <div class="pix-header">
-                <span>🔄 Pagamento via Pix Dinâmico</span>
-            </div>
-            <p style="font-size: 0.9rem; color: var(--text-secundario);">Abra o aplicativo do seu banco e escaneie o código abaixo:</p>
+            <h3 style="color: var(--cor-pix);">🔄 Pix Gerado via API</h3>
+            <p style="font-size: 0.85rem; color: var(--text-secundario);">Aguardando o pagamento do cliente no app do banco...</p>
            
             <div id="qrcode-box"></div>
+            <h3 id="modal-pix-valor">R$ 0,00</h3>
            
-            <h3 id="modal-pix-valor" style="font-size: 1.4rem; color: var(--text-principal);">R$ 0,00</h3>
-           
-            <button class="btn btn-pix-simular" id="btn-confirmar-pix">Simular Confirmação do Banco (Webhook)</button>
-            <button class="btn btn-secundario" id="btn-cancelar-pix" style="width: 100%;">Cancelar Transação</button>
+            <button class="btn btn-pix-simular" id="btn-verificar-pix">Verificar se já foi Pago</button>
+            <button class="btn btn-secundario" id="btn-cancelar-pix">Cancelar Transação</button>
         </div>
     </div>
 
-    <!-- ==========================================================================
-       4. SCRIPT JAVASCRIPT (LÓGICA DO CARTÃO + INTEGRAÇÃO QR CODE)
-       ========================================================================== -->
     <script>
-        const faturaSalva = parseFloat(localStorage.getItem('fatura_cartao')) || 0.00;
+        // MUDAR COM O SEU LINK DEPOIS QUE ADICIONAR NA VERCEL
+        const URL_SERVIDOR_PYTHON = "https://seu-projeto-vercel.vercel.app/api/criar-pix";
 
         const bancoDeDadosSimulado = {
             limiteTotal: 2500.00,
-            faturaAtual: faturaSalva,
-            getLimiteDisponivel: function() {
-                return this.limiteTotal - this.faturaAtual;
-            }
+            faturaAtual: parseFloat(localStorage.getItem('fatura_cartao')) || 0.00,
+            getLimiteDisponivel: function() { return this.limiteTotal - this.faturaAtual; }
         };
 
-        const historicoSalvo = localStorage.getItem('historico_cartao');
-        const historicoDeTransacoes = historicoSalvo ? JSON.parse(historicoSalvo) : [];
-
-        let qrcodeGerador = null;
+        const historicoDeTransacoes = JSON.parse(localStorage.getItem('historico_cartao')) || [];
+        let idPagamentoAsaas = null;
         let transacaoPixPendente = null;
 
         const txtLimiteTotal = document.getElementById('txt-limite-total');
         const txtFaturaAtual = document.getElementById('txt-fatura-atual');
         const txtLimiteDisponivel = document.getElementById('txt-limite-disponivel');
-       
         const inputEstabelecimento = document.getElementById('input-estabelecimento');
         const inputValor = document.getElementById('input-valor');
         const selectMetodo = document.getElementById('select-metodo');
         const selectParcelas = document.getElementById('select-parcelas');
         const boxParcelas = document.getElementById('box-parcelas');
-       
         const btnComprar = document.getElementById('btn-comprar');
         const btnPagar = document.getElementById('btn-pagar');
         const caixaMensagem = document.getElementById('caixa-mensagem');
         const listaComprasVisual = document.getElementById('lista-compras');
-
         const modalPix = document.getElementById('modal-pix');
         const modalPixValor = document.getElementById('modal-pix-valor');
-        const btnConfirmarPix = document.getElementById('btn-confirmar-pix');
-        const btnCancelarPix = document.getElementById('btn-cancelar-pix');
 
-        function tocarSom(frequencia, duracao) {
+        function tocarSom(freq, dur) {
             try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const oscilador = audioCtx.createOscillator();
-                const ganhoNode = audioCtx.createGain();
-
-                oscilador.type = 'sine';
-                oscilador.frequency.setValueAtTime(frequencia, audioCtx.currentTime);
-                ganhoNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
-
-                oscilador.connect(ganhoNode);
-                ganhoNode.connect(audioCtx.destination);
-
-                oscilador.start();
-                setTimeout(() => { oscilador.stop(); audioCtx.close(); }, duracao);
-            } catch (e) { console.log(e); }
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator(); const gain = ctx.createGain();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.start(); setTimeout(() => { osc.stop(); ctx.close(); }, dur);
+            } catch(e){}
         }
 
-        selectMetodo.addEventListener('change', function() {
+        selectMetodo.addEventListener('change', () => {
             if (selectMetodo.value === 'pix') {
-                boxParcelas.style.opacity = '0.3';
-                selectParcelas.disabled = true;
-                selectParcelas.value = "1";
-                btnComprar.innerText = "Gerar QR Code Pix";
-                btnComprar.style.background = "linear-gradient(135deg, #32b1a4 0%, #227970 100%)";
+                boxParcelas.style.opacity = '0.3'; selectParcelas.disabled = true;
+                btnComprar.innerText = "Gerar QR Code Pix Real";
             } else {
-                boxParcelas.style.opacity = '1';
-                selectParcelas.disabled = false;
+                boxParcelas.style.opacity = '1'; selectParcelas.disabled = false;
                 btnComprar.innerText = "Pagar por Aproximação (NFC)";
-                btnComprar.style.background = "linear-gradient(135deg, #10b981 0%, #059669 100%)";
             }
         });
 
@@ -563,151 +226,101 @@
         }
 
         function exibirNotificacao(texto, tipo) {
-            caixaMensagem.className = "mensagem " + tipo;
-            caixaMensagem.innerText = texto;
-            setTimeout(() => { caixaMensagem.className = "mensagem"; }, 4000);
+            caixaMensagem.className = "mensagem " + tipo; caixaMensagem.innerText = texto;
+            setTimeout(() => { caixaMensagem.className = "mensagem"; }, 5000);
         }
 
         function atualizarHistoricoVisual() {
             listaComprasVisual.innerHTML = "";
-
             for (let i = historicoDeTransacoes.length - 1; i >= 0; i--) {
-                const transacao = historicoDeTransacoes[i];
-                const li = document.createElement('li');
-                li.className = 'transacao-item';
-               
-                let textoDetalhe = "";
-                if (transacao.metodo === 'pix') {
-                    textoDetalhe = `<span class="transacao-metodo metodo-pix">⚡ Pix à vista</span>`;
-                } else {
-                    textoDetalhe = `<span class="transacao-metodo metodo-cartao">💳 ` + (transacao.qtdParcelas === 1 ? "À vista" : `${transacao.qtdParcelas}x de ${transacao.valorParcela.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`) + `</span>`;
-                }
-
-                li.innerHTML = `
-                    <div class="transacao-info">
-                        <span class="transacao-estabelecimento">${transacao.loja}</span>
-                        ${textoDetalhe}
-                        <span class="transacao-data">${transacao.dataHora}</span>
-                    </div>
-                    <div class="transacao-valores">
-                        <span class="transacao-valor cor-fatura">- ${transacao.valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-                    </div>
-                `;
+                const t = historicoDeTransacoes[i];
+                const li = document.createElement('li'); li.className = 'transacao-item';
+                const detalhe = t.metodo === 'pix' ? '<span class="transacao-metodo metodo-pix">⚡ Pix Real</span>' : '<span class="transacao-metodo metodo-cartao">💳 Cartão</span>';
+                li.innerHTML = `<div class="transacao-info"><span class="transacao-estabelecimento">${t.loja}</span>${detalhe}</div><div><span class="transacao-valor cor-fatura">- ${t.valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>`;
                 listaComprasVisual.appendChild(li);
             }
         }
 
-        function salvarDadosNoNavegador() {
-            localStorage.setItem('fatura_cartao', bancoDeDadosSimulado.faturaAtual);
-            localStorage.setItem('historico_cartao', JSON.stringify(historicoDeTransacoes));
-        }
+        btnComprar.addEventListener('click', async () => {
+            const loja = inputEstabelecimento.value.trim();
+            const valor = parseFloat(inputValor.value);
+            if (!loja || isNaN(valor) || valor <= 0) return exibirNotificacao("Preencha os campos!", "erro");
 
-        btnComprar.addEventListener('click', function() {
-            const nomeLoja = inputEstabelecimento.value.trim();
-            const valorCompraTotal = parseFloat(inputValor.value);
-            const metodo = selectMetodo.value;
-            const numeroDeParcelas = parseInt(selectParcelas.value);
+            if (valor > bancoDeDadosSimulado.getLimiteDisponivel()) return exibirNotificacao("Sem limite!", "erro");
 
-            if (nomeLoja === "" || isNaN(valorCompraTotal) || valorCompraTotal <= 0) {
-                exibirNotificacao("Por favor, preencha a loja e um valor maior que zero.", "erro");
-                return;
-            }
-
-            const limiteDisponivelNoMomento = bancoDeDadosSimulado.getLimiteDisponivel();
-
-            if (valorCompraTotal > limiteDisponivelNoMomento) {
-                exibirNotificacao(`Limite Insuficiente! Falta R$ ${(valorCompraTotal - limiteDisponivelNoMomento).toFixed(2)}.`, "erro");
-                return;
-            }
-
-            const agora = new Date();
-            const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
-
-            if (metodo === 'cartao') {
-                btnComprar.innerText = "Processando Aproximação...";
+            if (selectMetodo.value === 'cartao') {
+                tocarSom(950, 150);
+                bancoDeDadosSimulado.faturaAtual += valor;
+                historicoDeTransacoes.push({ loja, valorTotal: valor, metodo: 'cartao' });
+                exibirNotificacao("Aprovado por Aproximação!", "sucesso");
+                limparFormulario();
+            } else {
+                btnComprar.innerText = "Conectando ao Banco...";
                 btnComprar.disabled = true;
 
-                setTimeout(() => {
-                    tocarSom(950, 150);
-
-                    bancoDeDadosSimulado.faturaAtual += valorCompraTotal;
-                    historicoDeTransacoes.push({
-                        loja: nomeLoja, valorTotal: valorCompraTotal, metodo: 'cartao',
-                        qtdParcelas: numeroDeParcelas, valorParcela: valorCompraTotal / numeroDeParcelas,
-                        dataHora: dataFormatada
+                try {
+                    const resposta = await fetch(URL_SERVIDOR_PYTHON, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ valor: valor, descricao: `Venda em ${loja}` })
                     });
+                   
+                    const dados = await resposta.json();
+                   
+                    if(dados.qr_code) {
+                        document.getElementById("qrcode-box").innerHTML = "";
+                        new QRCode(document.getElementById("qrcode-box"), { text: dados.qr_code, width: 200, height: 200 });
+                        modalPixValor.innerText = valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                       
+                        idPagamentoAsaas = dados.id;
+                        transacaoPixPendente = { loja, valorTotal: valor, metodo: 'pix' };
+                       
+                        modalPix.classList.add('ativo');
+                    } else {
+                        exibirNotificacao("Erro ao gerar Pix no banco Asaas.", "erro");
+                    }
+                } catch (erro) {
+                    exibirNotificacao("Erro de conexão com o servidor Python.", "erro");
+                } finally {
+                    btnComprar.innerText = "Gerar QR Code Pix Real";
+                    btnComprar.disabled = false;
+                }
+            }
+        });
 
-                    exibirNotificacao(`Aproximação Concluída! R$ ${valorCompraTotal.toFixed(2)} debitados.`, "sucesso");
+        document.getElementById('btn-verificar-pix').addEventListener('click', async () => {
+            if(!idPagamentoAsaas) return;
+           
+            try {
+                const checagem = await fetch(`${URL_SERVIDOR_PYTHON}?id=${idPagamentoAsaas}`);
+                const resultado = await checagem.json();
+               
+                if (resultado.status === 'approved') {
+                    tocarSom(1100, 100); setTimeout(() => { tocarSom(1400, 120); }, 120);
+                    bancoDeDadosSimulado.faturaAtual += transacaoPixPendente.valorTotal;
+                    historicoDeTransacoes.push(transacaoPixPendente);
+                    exibirNotificacao("Pix Confirmado pelo Banco! Saldo Atualizado.", "sucesso");
+                    modalPix.classList.remove('ativo');
                     limparFormulario();
-                }, 800);
-
-            } else if (metodo === 'pix') {
-                modalPixValor.innerText = valorCompraTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-               
-                transacaoPixPendente = {
-                    loja: nomeLoja, valorTotal: valorCompraTotal, metodo: 'pix', dataHora: dataFormatada
-                };
-
-                document.getElementById("qrcode-box").innerHTML = "";
-
-                qrcodeGerador = new QRCode(document.getElementById("qrcode-box"), {
-                    text: `payload-pix-falso:val=${valorCompraTotal}&loja=${nomeLoja}`,
-                    width: 180,
-                    height: 180,
-                    colorDark : "#0f172a",
-                    colorLight : "#ffffff"
-                });
-
-                modalPix.classList.add('ativo');
+                } else {
+                    exibirNotificacao("O banco informou que este Pix ainda não foi pago.", "erro");
+                }
+            } catch (e) {
+                exibirNotificacao("Erro ao checar status do Pix.", "erro");
             }
         });
 
-        btnConfirmarPix.addEventListener('click', function() {
-            if (transacaoPixPendente) {
-                tocarSom(1100, 100);
-                setTimeout(() => { tocarSom(1400, 120); }, 120);
-
-                bancoDeDadosSimulado.faturaAtual += transacaoPixPendente.valorTotal;
-                historicoDeTransacoes.push(transacaoPixPendente);
-               
-                exibirNotificacao(`Notificação do Banco: Pix de R$ ${transacaoPixPendente.valorTotal.toFixed(2)} Confirmado!`, "sucesso");
-               
-                modalPix.classList.remove('ativo');
-                transacaoPixPendente = null;
-                limparFormulario();
-            }
-        });
-
-        btnCancelarPix.addEventListener('click', function() {
-            modalPix.classList.remove('ativo');
-            transacaoPixPendente = null;
-            exibirNotificacao("Transação via Pix cancelada pelo usuário.", "erro");
-        });
-
+        document.getElementById('btn-cancelar-pix').addEventListener('click', () => { modalPix.classList.remove('ativo'); });
+       
         function limparFormulario() {
-            inputEstabelecimento.value = "";
-            inputValor.value = "";
-            selectParcelas.value = "1";
-            btnComprar.disabled = false;
-            if (selectMetodo.value === 'cartao') {
-                btnComprar.innerText = "Pagar por Aproximação (NFC)";
-            } else {
-                btnComprar.innerText = "Gerar QR Code Pix";
-            }
-            salvarDadosNoNavegador();
-            atualizarTela();
-            atualizarHistoricoVisual();
+            inputEstabelecimento.value = ""; inputValor.value = "";
+            localStorage.setItem('fatura_cartao', bancoDeDadosSimulado.faturaAtual);
+            localStorage.setItem('historico_cartao', JSON.stringify(historicoDeTransacoes));
+            atualizarTela(); atualizarHistoricoVisual();
         }
 
-        btnPagar.addEventListener('click', function() {
-            bancoDeDadosSimulado.faturaAtual = 0.00;
-            historicoDeTransacoes.length = 0;
-            exibirNotificacao("Simulador resetado com sucesso!", "sucesso");
-            limparFormulario();
-        });
-
-        atualizarTela();
-        atualizarHistoricoVisual();
+        btnPagar.addEventListener('click', () => { bancoDeDadosSimulado.faturaAtual = 0; historicoDeTransacoes.length = 0; limparFormulario(); });
+        atualizarTela(); atualizarHistoricoVisual();
     </script>
 </body>
 </html>
