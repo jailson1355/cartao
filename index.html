@@ -222,7 +222,6 @@
             border-color: var(--cor-destaque);
         }
 
-        /* Ajuste para colocar Valor e Parcelas lado a lado */
         .form-linha {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -247,6 +246,14 @@
 
         .btn:active {
             transform: scale(0.98);
+        }
+
+        /* Botão específico para simular aproximação física */
+        .btn-nfc {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        .btn-nfc:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
         }
 
         .btn-secundario {
@@ -388,8 +395,8 @@
 
         <div class="painel-direito">
             <div>
-                <h2>Simulador de Transações</h2>
-                <p style="color: var(--text-secundario); font-size: 0.85rem;">Treine a lógica de validações comerciais e bancárias.</p>
+                <h2>Simulador de Transações Física</h2>
+                <p style="color: var(--text-secundario); font-size: 0.85rem;">Simule o pagamento por aproximação com som de Maquininha.</p>
             </div>
 
             <div id="caixa-mensagem" class="mensagem"></div>
@@ -399,7 +406,6 @@
                 <input type="text" id="input-estabelecimento" placeholder="Ex: Mercado Livre, Miranda...">
             </div>
 
-            <!-- VALOR E PARCELAS LADO A LADO -->
             <div class="form-linha">
                 <div class="form-grupo">
                     <label for="input-valor">Valor Total (R$)</label>
@@ -420,7 +426,7 @@
                 </div>
             </div>
 
-            <button class="btn" id="btn-comprar">Simular Autorização de Compra</button>
+            <button class="btn btn-nfc" id="btn-comprar">Pagar por Aproximação (NFC)</button>
             <button class="btn btn-secundario" id="btn-pagar">Pagar Fatura Integralmente</button>
 
             <div class="historico-container">
@@ -432,18 +438,21 @@
     </div>
 
     <!-- ==========================================================================
-       4. SCRIPT JAVASCRIPT (LÓGICA ATUALIZADA COM PARCELAMENTO)
+       4. SCRIPT JAVASCRIPT (LÓGICA ATUALIZADA COM SOM DE MAQUININHA)
        ========================================================================== -->
     <script>
+        const faturaSalva = parseFloat(localStorage.getItem('fatura_cartao')) || 0.00;
+
         const bancoDeDadosSimulado = {
             limiteTotal: 2500.00,
-            faturaAtual: 0.00,
+            faturaAtual: faturaSalva,
             getLimiteDisponivel: function() {
                 return this.limiteTotal - this.faturaAtual;
             }
         };
 
-        const historicoDeTransacoes = [];
+        const historicoSalvo = localStorage.getItem('historico_cartao');
+        const historicoDeTransacoes = historicoSalvo ? JSON.parse(historicoSalvo) : [];
 
         const txtLimiteTotal = document.getElementById('txt-limite-total');
         const txtFaturaAtual = document.getElementById('txt-fatura-atual');
@@ -458,6 +467,37 @@
         const caixaMensagem = document.getElementById('caixa-mensagem');
         const listaComprasVisual = document.getElementById('lista-compras');
 
+        /**
+         * FUNÇÃO AVANÇADA: Emitir o som de BIP de Maquininha real
+         * Cria uma onda senoidal curta de alta frequência usando os alto-falantes do computador.
+         */
+        function tocarSomBipMaquininha() {
+            try {
+                // Instancia o gerador de áudio do navegador
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscilador = audioCtx.createOscillator();
+                const ganhoNode = audioCtx.createGain();
+
+                oscilador.type = 'sine'; // Som suave de onda senoidal
+                oscilador.frequency.setValueAtTime(950, audioCtx.currentTime); // 950Hz é a frequência perfeita do BIP comercial
+               
+                ganhoNode.gain.setValueAtTime(0.2, audioCtx.currentTime); // Controla o volume para não estourar
+
+                oscilador.connect(ganhoNode);
+                ganhoNode.connect(audioCtx.destination);
+
+                oscilador.start();
+               
+                // Faz o som durar exatamente 0.15 segundos (150 milissegundos)
+                setTimeout(() => {
+                    oscilador.stop();
+                    audioCtx.close();
+                }, 150);
+            } catch (e) {
+                console.log("Áudio bloqueado pelo navegador até a primeira interação.");
+            }
+        }
+
         function atualizarTela() {
             txtLimiteTotal.innerText = bancoDeDadosSimulado.limiteTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             txtFaturaAtual.innerText = bancoDeDadosSimulado.faturaAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -467,10 +507,7 @@
         function exibirNotificacao(texto, tipo) {
             caixaMensagem.className = "mensagem " + tipo;
             caixaMensagem.innerText = texto;
-           
-            setTimeout(() => {
-                caixaMensagem.className = "mensagem";
-            }, 4000);
+            setTimeout(() => { caixaMensagem.className = "mensagem"; }, 4000);
         }
 
         function atualizarHistoricoVisual() {
@@ -481,7 +518,6 @@
                 const li = document.createElement('li');
                 li.className = 'transacao-item';
                
-                // Texto customizado se for à vista ou parcelado
                 const textoParcela = transacao.qtdParcelas === 1
                     ? "À vista"
                     : `${transacao.qtdParcelas}x de ${transacao.valorParcela.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
@@ -500,6 +536,11 @@
             }
         }
 
+        function salvarDadosNoNavegador() {
+            localStorage.setItem('fatura_cartao', bancoDeDadosSimulado.faturaAtual);
+            localStorage.setItem('historico_cartao', JSON.stringify(historicoDeTransacoes));
+        }
+
         btnComprar.addEventListener('click', function() {
             const nomeLoja = inputEstabelecimento.value.trim();
             const valorCompraTotal = parseFloat(inputValor.value);
@@ -512,30 +553,41 @@
 
             const limiteDisponivelNoMomento = bancoDeDadosSimulado.getLimiteDisponivel();
 
-            // Importante: No crédito, a validação consome o VALOR TOTAL da compra no limite, não apenas a primeira parcela!
             if (valorCompraTotal <= limiteDisponivelNoMomento) {
                
-                // Lógica Matemática do Parcelamento
-                bancoDeDadosSimulado.faturaAtual += valorCompraTotal;
-                const valorDaCadaParcela = valorCompraTotal / numeroDeParcelas;
-               
-                const agora = new Date();
-                historicoDeTransacoes.push({
-                    loja: nomeLoja,
-                    valorTotal: valorCompraTotal,
-                    qtdParcelas: numeroDeParcelas,
-                    valorParcela: valorDaCadaParcela,
-                    dataHora: agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})
-                });
+                // MÁGICA VISUAL E SONORA: Muda o texto do botão para fingir leitura NFC
+                btnComprar.innerText = "Processando Aproximação...";
+                btnComprar.disabled = true;
 
-                exibirNotificacao(`Compra de R$ ${valorCompraTotal.toFixed(2)} aprovada em ${numeroDeParcelas}x!`, "sucesso");
-               
-                inputEstabelecimento.value = "";
-                inputValor.value = "";
-                selectParcelas.value = "1"; // Volta para o padrão à vista
+                setTimeout(() => {
+                    // Toca o BIP real da maquininha!
+                    tocarSomBipMaquininha();
 
-                atualizarTela();
-                atualizarHistoricoVisual();
+                    bancoDeDadosSimulado.faturaAtual += valorCompraTotal;
+                    const valorDaCadaParcela = valorCompraTotal / numeroDeParcelas;
+                   
+                    const agora = new Date();
+                    historicoDeTransacoes.push({
+                        loja: nomeLoja,
+                        valorTotal: valorCompraTotal,
+                        qtdParcelas: numeroDeParcelas,
+                        valorParcela: valorDaCadaParcela,
+                        dataHora: agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})
+                    });
+
+                    exibirNotificacao(`Aproximação Concluída! R$ ${valorCompraTotal.toFixed(2)} debitados.`, "sucesso");
+                   
+                    inputEstabelecimento.value = "";
+                    inputValor.value = "";
+                    selectParcelas.value = "1";
+
+                    btnComprar.innerText = "Pagar por Aproximação (NFC)";
+                    btnComprar.disabled = false;
+
+                    salvarDadosNoNavegador();
+                    atualizarTela();
+                    atualizarHistoricoVisual();
+                }, 800); // 800 milissegundos de delay para simular o tempo de leitura do chip
 
             } else {
                 const faltaQuanto = valorCompraTotal - limiteDisponivelNoMomento;
@@ -550,12 +602,17 @@
             }
 
             bancoDeDadosSimulado.faturaAtual = 0.00;
-            exibirNotificacao("Fatura paga com sucesso! Seu limite foi totalmente restabelecido.", "sucesso");
+            historicoDeTransacoes.length = 0;
+
+            salvarDadosNoNavegador();
+            exibirNotificacao("Fatura paga! Seu limite foi totalmente restabelecido.", "sucesso");
            
             atualizarTela();
+            atualizarHistoricoVisual();
         });
 
         atualizarTela();
+        atualizarHistoricoVisual();
     </script>
 </body>
 </html>
