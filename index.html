@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador de Cartão de Crédito PRO</title>
+    <title>Simulador de Cartão de Crédito e Pix PRO</title>
+    <!-- Biblioteca externa para gerar QR Codes dinamicamente via JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         /* ==========================================================================
-           1. CONFIGURAÇÕES GERAIS E VARIÁVEIS DE CORES (CSS MODERNO)
+           1. CONFIGURAÇÕES GERAIS E VARIÁVEIS DE CORES
            ========================================================================== */
         :root {
             --bg-principal: #0f172a;
@@ -17,6 +19,7 @@
             --cor-erro: #ef4444;
             --cor-destaque: #6366f1;
             --cor-destaque-hover: #4f46e5;
+            --cor-pix: #32b1a4;
             --gradiente-cartao: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
             --borda: #334155;
         }
@@ -54,7 +57,7 @@
         }
 
         /* ==========================================================================
-           2. ESTILIZAÇÃO VISUAL DO CARTÃO DE CRÉDITO (INTERFACE)
+           2. INTERFACE DO CARTÃO E VALORES
            ========================================================================== */
         .painel-esquerdo {
             display: flex;
@@ -109,10 +112,11 @@
         }
 
         .cartao-numero {
-            font-size: 1.3rem;
-            letter-spacing: 3px;
+            font-size: 1.25rem;
+            letter-spacing: 2px;
             margin-top: 15px;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+            white-space: nowrap;
         }
 
         .cartao-dados {
@@ -177,7 +181,7 @@
         .cor-fatura { color: var(--cor-erro); }
 
         /* ==========================================================================
-           3. FORMULÁRIO DE OPERAÇÕES E HISTÓRICO
+           3. FORMULÁRIO DE OPERAÇÕES
            ========================================================================== */
         .painel-direito {
             background-color: var(--bg-card);
@@ -237,22 +241,16 @@
             font-size: 1rem;
             font-weight: bold;
             cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
+            transition: all 0.2s;
         }
 
-        .btn:hover {
-            background-color: var(--cor-destaque-hover);
-        }
+        .btn:hover { background-color: var(--cor-destaque-hover); }
+        .btn:active { transform: scale(0.98); }
 
-        .btn:active {
-            transform: scale(0.98);
-        }
-
-        /* Botão específico para simular aproximação física */
-        .btn-nfc {
+        .btn-processar {
             background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         }
-        .btn-nfc:hover {
+        .btn-processar:hover {
             background: linear-gradient(135deg, #059669 0%, #047857 100%);
         }
 
@@ -305,13 +303,8 @@
             padding-right: 5px;
         }
 
-        .lista-transacoes::-webkit-scrollbar {
-            width: 6px;
-        }
-        .lista-transacoes::-webkit-scrollbar-thumb {
-            background-color: var(--borda);
-            border-radius: 3px;
-        }
+        .lista-transacoes::-webkit-scrollbar { width: 6px; }
+        .lista-transacoes::-webkit-scrollbar-thumb { background-color: var(--borda); border-radius: 3px; }
 
         .transacao-item {
             background-color: var(--bg-principal);
@@ -324,54 +317,85 @@
             font-size: 0.85rem;
         }
 
-        .transacao-info {
+        .transacao-info { display: flex; flex-direction: column; gap: 2px; }
+        .transacao-estabelecimento { font-weight: bold; }
+        .transacao-metodo { font-size: 0.75rem; font-weight: 500; }
+        .metodo-cartao { color: var(--cor-destaque); }
+        .metodo-pix { color: var(--cor-pix); }
+        .transacao-data { color: var(--text-secundario); font-size: 0.75rem; }
+        .transacao-valores { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+        .transacao-valor { font-weight: bold; }
+
+        /* ==========================================================================
+           4. MODAL VISUAL DO QR CODE PIX (TELA FLUTUANTE)
+           ========================================================================== */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1000;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.ativo {
+            opacity: 1; pointer-events: auto;
+        }
+
+        .modal-conteudo {
+            background-color: var(--bg-card);
+            border: 1px solid var(--borda);
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
         }
 
-        .transacao-estabelecimento {
-            font-weight: bold;
+        .pix-header {
+            display: flex; align-items: center; gap: 10px;
+            color: var(--cor-pix); font-weight: bold; font-size: 1.2rem;
         }
 
-        .transacao-parcelas {
-            color: var(--cor-destaque);
-            font-size: 0.75rem;
-            font-weight: 500;
+        #qrcode-box {
+            background-color: white;
+            padding: 15px;
+            border-radius: 12px;
+            display: inline-block;
         }
 
-        .transacao-data {
-            color: var(--text-secundario);
-            font-size: 0.75rem;
+        .btn-pix-simular {
+            background-color: var(--cor-pix);
+            width: 100%;
         }
-
-        .transacao-valores {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 2px;
-        }
-
-        .transacao-valor {
-            font-weight: bold;
+        .btn-pix-simular:hover {
+            background-color: #289186;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-       
+        <!-- PAINEL ESQUERDO (INTERFACE DO CARTÃO) -->
         <div class="painel-esquerdo">
             <div class="cartao-credito">
                 <div class="cartao-topo">
                     <span class="banco-nome">DevBank Code</span>
                     <div class="chip"></div>
                 </div>
-                <div class="cartao-numero">4532 •••• •••• 8841</div>
+                <!-- NÚMERO EXIBIDO POR COMPLETO -->
+                <div class="cartao-numero">4532 8192 3041 8841</div>
                 <div class="cartao-dados">
                     <div>
                         <div class="titular-label">Titular do Cartão</div>
-                        <div class="titular-nome">Dev Master Pro</div>
+                        <!-- NOME CORRIGIDO AQUI EMBAIXO -->
+                        <div class="titular-nome">TITULAR DO CARTÃO</div>
                     </div>
                     <div class="bandeira">VISA</div>
                 </div>
@@ -393,10 +417,11 @@
             </div>
         </div>
 
+        <!-- PAINEL DIREITO -->
         <div class="painel-direito">
             <div>
-                <h2>Simulador de Transações Física</h2>
-                <p style="color: var(--text-secundario); font-size: 0.85rem;">Simule o pagamento por aproximação com som de Maquininha.</p>
+                <h2>Simulador de Transações Multimeios</h2>
+                <p style="color: var(--text-secundario); font-size: 0.85rem;">Simule pagamentos físicos por aproximação ou via QR Code Pix.</p>
             </div>
 
             <div id="caixa-mensagem" class="mensagem"></div>
@@ -406,39 +431,61 @@
                 <input type="text" id="input-estabelecimento" placeholder="Ex: Mercado Livre, Miranda...">
             </div>
 
-            <div class="form-linha">
+            <div class="form-grupo">
+                <label for="select-metodo">Forma de Pagamento</label>
+                <select id="select-metodo">
+                    <option value="cartao">Cartão de Crédito (Aproximação NFC)</option>
+                    <option value="pix">Pix (Gerar QR Code Dinâmico)</option>
+                </select>
+            </div>
+
+            <div class="form-linha" id="linha-parcelas">
                 <div class="form-grupo">
                     <label for="input-valor">Valor Total (R$)</label>
                     <input type="number" id="input-valor" placeholder="0.00" step="0.01" min="0.01">
                 </div>
-                <div class="form-grupo">
+                <div class="form-grupo" id="box-parcelas">
                     <label for="select-parcelas">Opções de Parcelas</label>
                     <select id="select-parcelas">
                         <option value="1">À vista</option>
                         <option value="2">2x sem juros</option>
                         <option value="3">3x sem juros</option>
                         <option value="4">4x sem juros</option>
-                        <option value="5">5x sem juros</option>
                         <option value="6">6x sem juros</option>
-                        <option value="10">10x sem juros</option>
                         <option value="12">12x sem juros</option>
                     </select>
                 </div>
             </div>
 
-            <button class="btn btn-nfc" id="btn-comprar">Pagar por Aproximação (NFC)</button>
-            <button class="btn btn-secundario" id="btn-pagar">Pagar Fatura Integralmente</button>
+            <button class="btn btn-processar" id="btn-comprar">Pagar por Aproximação (NFC)</button>
+            <button class="btn btn-secundario" id="btn-pagar">Pagar Fatura / Resetar</button>
 
             <div class="historico-container">
                 <h2 style="font-size: 1rem; margin-bottom: 10px;">Histórico de Compras Aprovadas</h2>
                 <ul class="lista-transacoes" id="lista-compras"></ul>
             </div>
         </div>
+    </div>
 
+    <!-- WINDOW MODAL DO PIX -->
+    <div class="modal-overlay" id="modal-pix">
+        <div class="modal-conteudo">
+            <div class="pix-header">
+                <span>🔄 Pagamento via Pix Dinâmico</span>
+            </div>
+            <p style="font-size: 0.9rem; color: var(--text-secundario);">Abra o aplicativo do seu banco e escaneie o código abaixo:</p>
+           
+            <div id="qrcode-box"></div>
+           
+            <h3 id="modal-pix-valor" style="font-size: 1.4rem; color: var(--text-principal);">R$ 0,00</h3>
+           
+            <button class="btn btn-pix-simular" id="btn-confirmar-pix">Simular Confirmação do Banco (Webhook)</button>
+            <button class="btn btn-secundario" id="btn-cancelar-pix" style="width: 100%;">Cancelar Transação</button>
+        </div>
     </div>
 
     <!-- ==========================================================================
-       4. SCRIPT JAVASCRIPT (LÓGICA ATUALIZADA COM SOM DE MAQUININHA)
+       4. SCRIPT JAVASCRIPT (LÓGICA DO CARTÃO + INTEGRAÇÃO QR CODE)
        ========================================================================== -->
     <script>
         const faturaSalva = parseFloat(localStorage.getItem('fatura_cartao')) || 0.00;
@@ -454,49 +501,61 @@
         const historicoSalvo = localStorage.getItem('historico_cartao');
         const historicoDeTransacoes = historicoSalvo ? JSON.parse(historicoSalvo) : [];
 
+        let qrcodeGerador = null;
+        let transacaoPixPendente = null;
+
         const txtLimiteTotal = document.getElementById('txt-limite-total');
         const txtFaturaAtual = document.getElementById('txt-fatura-atual');
         const txtLimiteDisponivel = document.getElementById('txt-limite-disponivel');
        
         const inputEstabelecimento = document.getElementById('input-estabelecimento');
         const inputValor = document.getElementById('input-valor');
+        const selectMetodo = document.getElementById('select-metodo');
         const selectParcelas = document.getElementById('select-parcelas');
+        const boxParcelas = document.getElementById('box-parcelas');
        
         const btnComprar = document.getElementById('btn-comprar');
         const btnPagar = document.getElementById('btn-pagar');
         const caixaMensagem = document.getElementById('caixa-mensagem');
         const listaComprasVisual = document.getElementById('lista-compras');
 
-        /**
-         * FUNÇÃO AVANÇADA: Emitir o som de BIP de Maquininha real
-         * Cria uma onda senoidal curta de alta frequência usando os alto-falantes do computador.
-         */
-        function tocarSomBipMaquininha() {
+        const modalPix = document.getElementById('modal-pix');
+        const modalPixValor = document.getElementById('modal-pix-valor');
+        const btnConfirmarPix = document.getElementById('btn-confirmar-pix');
+        const btnCancelarPix = document.getElementById('btn-cancelar-pix');
+
+        function tocarSom(frequencia, duracao) {
             try {
-                // Instancia o gerador de áudio do navegador
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 const oscilador = audioCtx.createOscillator();
                 const ganhoNode = audioCtx.createGain();
 
-                oscilador.type = 'sine'; // Som suave de onda senoidal
-                oscilador.frequency.setValueAtTime(950, audioCtx.currentTime); // 950Hz é a frequência perfeita do BIP comercial
-               
-                ganhoNode.gain.setValueAtTime(0.2, audioCtx.currentTime); // Controla o volume para não estourar
+                oscilador.type = 'sine';
+                oscilador.frequency.setValueAtTime(frequencia, audioCtx.currentTime);
+                ganhoNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
 
                 oscilador.connect(ganhoNode);
                 ganhoNode.connect(audioCtx.destination);
 
                 oscilador.start();
-               
-                // Faz o som durar exatamente 0.15 segundos (150 milissegundos)
-                setTimeout(() => {
-                    oscilador.stop();
-                    audioCtx.close();
-                }, 150);
-            } catch (e) {
-                console.log("Áudio bloqueado pelo navegador até a primeira interação.");
-            }
+                setTimeout(() => { oscilador.stop(); audioCtx.close(); }, duracao);
+            } catch (e) { console.log(e); }
         }
+
+        selectMetodo.addEventListener('change', function() {
+            if (selectMetodo.value === 'pix') {
+                boxParcelas.style.opacity = '0.3';
+                selectParcelas.disabled = true;
+                selectParcelas.value = "1";
+                btnComprar.innerText = "Gerar QR Code Pix";
+                btnComprar.style.background = "linear-gradient(135deg, #32b1a4 0%, #227970 100%)";
+            } else {
+                boxParcelas.style.opacity = '1';
+                selectParcelas.disabled = false;
+                btnComprar.innerText = "Pagar por Aproximação (NFC)";
+                btnComprar.style.background = "linear-gradient(135deg, #10b981 0%, #059669 100%)";
+            }
+        });
 
         function atualizarTela() {
             txtLimiteTotal.innerText = bancoDeDadosSimulado.limiteTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -518,14 +577,17 @@
                 const li = document.createElement('li');
                 li.className = 'transacao-item';
                
-                const textoParcela = transacao.qtdParcelas === 1
-                    ? "À vista"
-                    : `${transacao.qtdParcelas}x de ${transacao.valorParcela.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
+                let textoDetalhe = "";
+                if (transacao.metodo === 'pix') {
+                    textoDetalhe = `<span class="transacao-metodo metodo-pix">⚡ Pix à vista</span>`;
+                } else {
+                    textoDetalhe = `<span class="transacao-metodo metodo-cartao">💳 ` + (transacao.qtdParcelas === 1 ? "À vista" : `${transacao.qtdParcelas}x de ${transacao.valorParcela.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`) + `</span>`;
+                }
 
                 li.innerHTML = `
                     <div class="transacao-info">
                         <span class="transacao-estabelecimento">${transacao.loja}</span>
-                        <span class="transacao-parcelas">${textoParcela}</span>
+                        ${textoDetalhe}
                         <span class="transacao-data">${transacao.dataHora}</span>
                     </div>
                     <div class="transacao-valores">
@@ -544,71 +606,105 @@
         btnComprar.addEventListener('click', function() {
             const nomeLoja = inputEstabelecimento.value.trim();
             const valorCompraTotal = parseFloat(inputValor.value);
+            const metodo = selectMetodo.value;
             const numeroDeParcelas = parseInt(selectParcelas.value);
 
             if (nomeLoja === "" || isNaN(valorCompraTotal) || valorCompraTotal <= 0) {
-                exibirNotificacao("Por favor, insira um nome de loja válido e um valor maior que zero.", "erro");
+                exibirNotificacao("Por favor, preencha a loja e um valor maior que zero.", "erro");
                 return;
             }
 
             const limiteDisponivelNoMomento = bancoDeDadosSimulado.getLimiteDisponivel();
 
-            if (valorCompraTotal <= limiteDisponivelNoMomento) {
-               
-                // MÁGICA VISUAL E SONORA: Muda o texto do botão para fingir leitura NFC
+            if (valorCompraTotal > limiteDisponivelNoMomento) {
+                exibirNotificacao(`Limite Insuficiente! Falta R$ ${(valorCompraTotal - limiteDisponivelNoMomento).toFixed(2)}.`, "erro");
+                return;
+            }
+
+            const agora = new Date();
+            const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+
+            if (metodo === 'cartao') {
                 btnComprar.innerText = "Processando Aproximação...";
                 btnComprar.disabled = true;
 
                 setTimeout(() => {
-                    // Toca o BIP real da maquininha!
-                    tocarSomBipMaquininha();
+                    tocarSom(950, 150);
 
                     bancoDeDadosSimulado.faturaAtual += valorCompraTotal;
-                    const valorDaCadaParcela = valorCompraTotal / numeroDeParcelas;
-                   
-                    const agora = new Date();
                     historicoDeTransacoes.push({
-                        loja: nomeLoja,
-                        valorTotal: valorCompraTotal,
-                        qtdParcelas: numeroDeParcelas,
-                        valorParcela: valorDaCadaParcela,
-                        dataHora: agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})
+                        loja: nomeLoja, valorTotal: valorCompraTotal, metodo: 'cartao',
+                        qtdParcelas: numeroDeParcelas, valorParcela: valorCompraTotal / numeroDeParcelas,
+                        dataHora: dataFormatada
                     });
 
                     exibirNotificacao(`Aproximação Concluída! R$ ${valorCompraTotal.toFixed(2)} debitados.`, "sucesso");
-                   
-                    inputEstabelecimento.value = "";
-                    inputValor.value = "";
-                    selectParcelas.value = "1";
+                    limparFormulario();
+                }, 800);
 
-                    btnComprar.innerText = "Pagar por Aproximação (NFC)";
-                    btnComprar.disabled = false;
+            } else if (metodo === 'pix') {
+                modalPixValor.innerText = valorCompraTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+               
+                transacaoPixPendente = {
+                    loja: nomeLoja, valorTotal: valorCompraTotal, metodo: 'pix', dataHora: dataFormatada
+                };
 
-                    salvarDadosNoNavegador();
-                    atualizarTela();
-                    atualizarHistoricoVisual();
-                }, 800); // 800 milissegundos de delay para simular o tempo de leitura do chip
+                document.getElementById("qrcode-box").innerHTML = "";
 
-            } else {
-                const faltaQuanto = valorCompraTotal - limiteDisponivelNoMomento;
-                exibirNotificacao(`Transação Recusada: Limite Insuficiente! Falta R$ ${faltaQuanto.toFixed(2)} de saldo livre.`, "erro");
+                qrcodeGerador = new QRCode(document.getElementById("qrcode-box"), {
+                    text: `payload-pix-falso:val=${valorCompraTotal}&loja=${nomeLoja}`,
+                    width: 180,
+                    height: 180,
+                    colorDark : "#0f172a",
+                    colorLight : "#ffffff"
+                });
+
+                modalPix.classList.add('ativo');
             }
         });
 
-        btnPagar.addEventListener('click', function() {
-            if (bancoDeDadosSimulado.faturaAtual === 0) {
-                exibirNotificacao("Sua fatura já está zerada. Não há o que pagar!", "erro");
-                return;
+        btnConfirmarPix.addEventListener('click', function() {
+            if (transacaoPixPendente) {
+                tocarSom(1100, 100);
+                setTimeout(() => { tocarSom(1400, 120); }, 120);
+
+                bancoDeDadosSimulado.faturaAtual += transacaoPixPendente.valorTotal;
+                historicoDeTransacoes.push(transacaoPixPendente);
+               
+                exibirNotificacao(`Notificação do Banco: Pix de R$ ${transacaoPixPendente.valorTotal.toFixed(2)} Confirmado!`, "sucesso");
+               
+                modalPix.classList.remove('ativo');
+                transacaoPixPendente = null;
+                limparFormulario();
             }
+        });
 
-            bancoDeDadosSimulado.faturaAtual = 0.00;
-            historicoDeTransacoes.length = 0;
+        btnCancelarPix.addEventListener('click', function() {
+            modalPix.classList.remove('ativo');
+            transacaoPixPendente = null;
+            exibirNotificacao("Transação via Pix cancelada pelo usuário.", "erro");
+        });
 
+        function limparFormulario() {
+            inputEstabelecimento.value = "";
+            inputValor.value = "";
+            selectParcelas.value = "1";
+            btnComprar.disabled = false;
+            if (selectMetodo.value === 'cartao') {
+                btnComprar.innerText = "Pagar por Aproximação (NFC)";
+            } else {
+                btnComprar.innerText = "Gerar QR Code Pix";
+            }
             salvarDadosNoNavegador();
-            exibirNotificacao("Fatura paga! Seu limite foi totalmente restabelecido.", "sucesso");
-           
             atualizarTela();
             atualizarHistoricoVisual();
+        }
+
+        btnPagar.addEventListener('click', function() {
+            bancoDeDadosSimulado.faturaAtual = 0.00;
+            historicoDeTransacoes.length = 0;
+            exibirNotificacao("Simulador resetado com sucesso!", "sucesso");
+            limparFormulario();
         });
 
         atualizarTela();
