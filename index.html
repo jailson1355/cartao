@@ -305,6 +305,80 @@
         // Inicializa gerando o QR Code padrão de R$ 100 para o botão fixo funcionar logo de cara
         gerarQrCode(valorAtual);
     </script>
+    <script>
+    let limiteMaximo = 3000;
+    let valorAtual = 100;
+
+    // Busca o limite real lá do servidor Python assim que a página abre
+    window.onload = async function() {
+        try {
+            let resposta = await fetch('http://127.0.0.1:5000/api/cartao');
+            let dados = await resposta.json();
+            limiteMaximo = dados.limite_disponivel;
+            document.getElementById('limite-val').innerText = `R$ ${limiteMaximo.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        } catch (erro) {
+            console.log("Aviso: Servidor Python não está conectado.");
+        }
+        gerarQrCode(valorAtual);
+    };
+
+    function selecionarValor(valor) {
+        valorAtual = valor;
+        document.getElementById('valor-custom').value = '';
+        gerarQrCode(valorAtual);
+    }
+
+    function atualizarValorCustom() {
+        let val = parseFloat(document.getElementById('valor-custom').value);
+        if (!isNaN(val) && val > 0) {
+            valorAtual = val;
+            gerarQrCode(valorAtual);
+        } else {
+            document.getElementById('container-pix').style.display = 'none';
+        }
+    }
+
+    function gerarQrCode(valor) {
+        document.getElementById('container-pix').style.display = 'flex';
+        document.getElementById('texto-valor-pix').innerText = `QR Code Pix: R$ ${valor.toFixed(2)}`;
+        document.getElementById('status-msg').innerText = "";
+       
+        document.getElementById('qrcode').innerHTML = "";
+        let payloadSimulado = `00020126580014br.gov.bcb.pix0136jailsonsantos@email.com5204000053039865802BR5925JAILSON FREDDY DOS SANTOS6009RIO JANEIRO62070503***6304VALOR:${valor}`;
+
+        new QRCode(document.getElementById("qrcode"), { text: payloadSimulado, width: 120, height: 120 });
+    }
+
+    // Essa função envia o pagamento para a API em Python que está rodando no seu terminal
+    async function realizarPagamento() {
+        let statusDiv = document.getElementById('status-msg');
+        statusDiv.style.color = "var(--text-secundario)";
+        statusDiv.innerText = "Processando pagamento no servidor...";
+       
+        try {
+            let resposta = await fetch('http://127.0.0.1:5000/api/pagar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ valor: valorAtual })
+            });
+
+            let dados = await resposta.json();
+
+            if (dados.sucesso) {
+                limiteMaximo = dados.novo_limite;
+                document.getElementById('limite-val').innerText = `R$ ${limiteMaximo.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+                statusDiv.style.color = "var(--cor-sucesso)";
+                statusDiv.innerText = dados.mensagem;
+            } else {
+                statusDiv.style.color = "var(--cor-erro)";
+                statusDiv.innerText = "Erro: " + dados.mensagem;
+            }
+        } catch (erro) {
+            statusDiv.style.color = "var(--cor-erro)";
+            statusDiv.innerText = "Erro: O servidor Python está desligado!";
+        }
+    }
+</script>
 
 </body>
 </html>
