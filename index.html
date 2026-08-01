@@ -379,6 +379,31 @@
         }
     }
 </script>
+     <!-- Cole este script dentro do seu arquivo index.html, logo antes do </body> -->
+    <script>
+        async function realizarPagamento() {
+            try {
+                const resposta = await fetch('http://127.0.0.1:5000/api/pagar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ valor: 50.00 })
+                });
 
+                let dados = await resposta.json();
+               
+                if (dados.sucesso) {
+                    // Atualiza o limite na tela com o novo valor vindo da API
+                    document.getElementById('limite-val').innerText = "R$ " + dados.novo_limite;
+                    console.log(dados.mensagem);
+                } else {
+                    console.log("Erro: " + dados.mensagem);
+                }
+            } catch (erro) {
+                console.log("Erro: O servidor Python está desligado ou inacessível.");
+            }
+        }
+    </script>
 </body>
 </html>
