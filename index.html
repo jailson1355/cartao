@@ -4,323 +4,307 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulador de Cartão de Crédito e Pix Real</title>
+    <!-- Biblioteca para gerar o QR Code -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
-            --bg-principal: #0f172a;
-            --bg-card: #1e293b;
-            --text-principal: #f8fafc;
-            --text-secundario: #94a3b8;
-            --cor-sucesso: #10b981;
-            --cor-erro: #ef4444;
-            --cor-destaque: #6366f1;
-            --cor-destaque-hover: #4f46e5;
-            --cor-pix: #32b1a4;
-            --gradiente-cartao: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-            --borda: #334155;
+          --bg-principal: #0f172a;
+          --bg-card: #1e293b;
+          --text-principal: #f8fafc;
+          --text-secundario: #94a3b8;
+          --cor-sucesso: #10b981;
+          --cor-erro: #ef4444;
+          --cor-destaque: #6366f1;
+          --cor-destaque-hover: #4f46e5;
+          --cor-pix: #12b1a4;
+          --gradiente-cartao: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+          --borda: #334155;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { background-color: var(--bg-principal); color: var(--text-principal); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
-        .container { width: 100%; max-width: 900px; display: grid; grid-template-columns: 1fr; gap: 30px; }
-        @media (min-width: 768px) { .container { grid-template-columns: 1fr 1fr; align-items: start; } }
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+          font-family: 'Segoe UI', sans-serif;
+        }
 
-        .painel-esquerdo { display: flex; flex-direction: column; gap: 20px; }
-        .cartao-credito { background: var(--gradiente-cartao); border-radius: 20px; padding: 25px; height: 220px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5); position: relative; overflow: hidden; }
-        .cartao-topo { display: flex; justify-content: space-between; align-items: center; }
-        .banco-nome { font-size: 1.1rem; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; }
-        .chip { width: 45px; height: 35px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 6px; }
-        .cartao-numero { font-size: 1.25rem; letter-spacing: 2px; margin-top: 15px; text-shadow: 1px 1px 2px rgba(0,0,0,0.4); }
-        .cartao-dados { display: flex; justify-content: space-between; align-items: flex-end; }
-        .titular-label { font-size: 0.7rem; color: rgba(255, 255, 255, 0.7); text-transform: uppercase; margin-bottom: 2px; }
-        .titular-nome { font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; }
-        .bandeira { font-size: 1.4rem; font-style: italic; font-weight: bold; }
+        body {
+          background-color: var(--bg-principal);
+          color: var(--text-principal);
+          min-height: 100vh;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 20px;
+        }
 
-        .painel-valores { background-color: var(--bg-card); border: 1px solid var(--borda); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-        .valor-box { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--borda); }
-        .valor-box:last-child { border-bottom: none; padding-bottom: 0; }
-        .valor-label { color: var(--text-secundario); font-size: 0.9rem; }
-        .valor-numero { font-size: 1.2rem; font-weight: bold; }
-        .cor-limite { color: var(--cor-sucesso); }
-        .cor-fatura { color: var(--cor-erro); }
+        .container {
+          width: 100%;
+          max-width: 900px;
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 30px;
+          margin: 0 auto;
+        }
 
-        .painel-direito { background-color: var(--bg-card); border: 1px solid var(--borda); border-radius: 16px; padding: 25px; display: flex; flex-direction: column; gap: 20px; }
-        h2 { font-size: 1.3rem; margin-bottom: 5px; }
-        .form-grupo { display: flex; flex-direction: column; gap: 8px; }
-        label { font-size: 0.85rem; color: var(--text-secundario); }
-        input, select { background-color: var(--bg-principal); border: 1px solid var(--borda); color: var(--text-principal); padding: 12px; border-radius: 8px; font-size: 1rem; outline: none; }
-        .form-linha { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-       
-        .btn { color: white; border: none; padding: 14px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: all 0.2s; width: 100%; }
-        .btn-processar { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
-        .btn-secundario { background-color: transparent; border: 1px solid var(--borda); color: var(--text-secundario); }
-        .btn-secundario:hover { background-color: rgba(255, 255, 255, 0.05); color: var(--text-principal); }
+        @media (min-width: 768px) {
+          .container {
+            grid-template-columns: 1fr 1fr;
+            align-items: start;
+          }
+        }
 
-        .mensagem { padding: 12px; border-radius: 8px; font-size: 0.9rem; display: none; text-align: center; font-weight: 500; }
-        .mensagem.sucesso { display: block; background-color: rgba(16, 185, 129, 0.15); color: var(--cor-sucesso); border: 1px solid var(--cor-sucesso); }
-        .mensagem.erro { display: block; background-color: rgba(239, 68, 68, 0.15); color: var(--cor-erro); border: 1px solid var(--cor-erro); }
+        .col-esquerda {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          width: 100%;
+          align-items: center;
+        }
 
-        .lista-transacoes { list-style: none; max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-        .transacao-item { background-color: var(--bg-principal); border: 1px solid var(--borda); padding: 10px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
-        .transacao-info { display: flex; flex-direction: column; gap: 2px; }
-        .transacao-metodo { font-size: 0.75rem; font-weight: 500; }
-        .metodo-cartao { color: var(--cor-destaque); }
-        .metodo-pix { color: var(--cor-pix); }
+        .cartao-credito {
+          background: var(--gradiente-cartao);
+          border: 1px solid var(--borda);
+          border-radius: 20px;
+          padding: 25px;
+          width: 100%;
+          max-width: 380px;
+          height: 220px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+        }
 
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
-        .modal-overlay.ativo { opacity: 1; pointer-events: auto; }
-        .modal-conteudo { background-color: var(--bg-card); border: 1px solid var(--borda); padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; }
-        #qrcode-box { background-color: white; padding: 15px; border-radius: 12px; display: inline-block; min-height: 210px; min-width: 210px; }
-        .btn-pix-simular { background-color: var(--cor-pix); }
+        .cartao-topo {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .cartao-chip {
+          width: 45px;
+          height: 35px;
+          background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+          border-radius: 6px;
+        }
+
+        .cartao-numero {
+          font-size: 1.2rem;
+          letter-spacing: 2px;
+          font-family: monospace;
+        }
+
+        .cartao-infos {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+        }
+
+        .cartao-nome {
+          font-size: 0.95rem;
+          font-weight: bold;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .painel-formulario {
+          background-color: var(--bg-card);
+          border: 1px solid var(--borda);
+          border-radius: 20px;
+          padding: 25px;
+          width: 100%;
+        }
+
+        .painel-formulario h2 {
+          margin-bottom: 10px;
+          font-size: 1.3rem;
+        }
+
+        .limite-info {
+          font-size: 0.9rem;
+          color: var(--text-secundario);
+          margin-bottom: 15px;
+        }
+
+        .grupo-botoes {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+          margin-bottom: 15px;
+        }
+
+        .btn-valor {
+          background-color: var(--bg-principal);
+          color: var(--text-principal);
+          border: 1px solid var(--borda);
+          padding: 10px;
+          border-radius: 10px;
+          cursor: pointer;
+          font-weight: bold;
+          transition: 0.2s;
+        }
+
+        .btn-valor:hover {
+          background-color: var(--cor-destaque);
+          border-color: var(--cor-destaque);
+        }
+
+        .input-personalizado {
+          width: 100%;
+          padding: 10px;
+          border-radius: 10px;
+          border: 1px solid var(--borda);
+          background-color: var(--bg-principal);
+          color: var(--text-principal);
+          margin-bottom: 15px;
+          font-size: 1rem;
+        }
+
+        /* Botão fixo de pagamento/zerar */
+        .btn-pagar-fixo {
+          background-color: var(--cor-sucesso);
+          color: white;
+          border: none;
+          padding: 12px;
+          border-radius: 10px;
+          cursor: pointer;
+          font-weight: bold;
+          font-size: 1rem;
+          width: 100%;
+          margin-bottom: 15px;
+          transition: 0.2s;
+        }
+
+        .btn-pagar-fixo:hover {
+          opacity: 0.9;
+        }
+
+        .area-pix {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          border-top: 1px solid var(--borda);
+          padding-top: 15px;
+        }
+
+        #qrcode {
+          background: white;
+          padding: 10px;
+          border-radius: 10px;
+        }
+
+        .status-pagamento {
+          font-weight: bold;
+          text-align: center;
+          font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <div class="painel-esquerdo">
+        <!-- Coluna do Cartão -->
+        <div class="col-esquerda">
             <div class="cartao-credito">
                 <div class="cartao-topo">
-                    <span class="banco-nome">DevBank Code</span>
-                    <div class="chip"></div>
+                    <div class="cartao-chip"></div>
+                    <span style="font-weight: bold; color: var(--cor-pix);">PIX / Crédito</span>
                 </div>
-                <div class="cartao-numero">4532 8192 3041 8841</div>
-                <div class="cartao-dados">
-                    <div>
-                        <div class="titular-label">Titular do Cartão</div>
-                        <div class="titular-nome">Jailson Freire dos Santos</div>
-                    </div>
-                    <div class="bandeira">VISA</div>
-                </div>
-            </div>
-
-            <div class="painel-valores">
-                <div class="valor-box">
-                    <span class="valor-label">Limite Total:</span>
-                    <span class="valor-numero" id="txt-limite-total">R$ 0,00</span>
-                </div>
-                <div class="valor-box">
-                    <span class="valor-label">Fatura Atual (Gasto):</span>
-                    <span class="valor-numero cor-fatura" id="txt-fatura-atual">R$ 0,00</span>
-                </div>
-                <div class="valor-box">
-                    <span class="valor-label">Limite Disponível para Compra:</span>
-                    <span class="valor-numero cor-limite" id="txt-limite-disponivel">R$ 0,00</span>
+                <div class="cartao-numero">4532 8900 1234 5678</div>
+                <div class="cartao-infos">
+                    <div class="cartao-nome">JAILSON FREire DOS SANTOS</div>
                 </div>
             </div>
         </div>
 
-        <div class="painel-direito">
-            <div>
-                <h2>Simulador de Transações Integrado</h2>
-                <p style="color: var(--text-secundario); font-size: 0.85rem;">Gere Pix reais integrados com a API do Asaas.</p>
-            </div>
-
-            <div id="caixa-mensagem" class="mensagem"></div>
-
-            <div class="form-grupo">
-                <label for="input-estabelecimento">Estabelecimento / Loja</label>
-                <input type="text" id="input-estabelecimento" placeholder="Ex: Mercado Livre, Miranda...">
-            </div>
-
-            <div class="form-grupo">
-                <label for="select-metodo">Forma de Pagamento</label>
-                <select id="select-metodo">
-                    <option value="cartao">Cartão de Crédito (Aproximação NFC)</option>
-                    <option value="pix">Pix (Gerar Pix de Verdade via API)</option>
-                </select>
-            </div>
-
-            <div class="form-linha">
-                <div class="form-grupo">
-                    <label for="input-valor">Valor Total (R$)</label>
-                    <input type="number" id="input-valor" placeholder="0.00" step="0.01" min="0.01">
-                </div>
-                <div class="form-grupo" id="box-parcelas">
-                    <label for="select-parcelas">Opções de Parcelas</label>
-                    <select id="select-parcelas">
-                        <option value="1">À vista</option>
-                        <option value="2">2x sem juros</option>
-                        <option value="3">3x sem juros</option>
-                    </select>
-                </div>
-            </div>
-
-            <button class="btn btn-processar" id="btn-comprar">Pagar por Aproximação (NFC)</button>
-            <button class="btn btn-secundario" id="btn-pagar">Pagar Fatura / Resetar</button>
-
-            <div class="historico-container">
-                <h2 style="font-size: 1rem; margin-bottom: 10px;">Histórico de Compras</h2>
-                <ul class="lista-transacoes" id="lista-compras"></ul>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL DO PIX -->
-    <div class="modal-overlay" id="modal-pix">
-        <div class="modal-conteudo">
-            <h3 style="color: var(--cor-pix);">🔄 Pix Gerado via API</h3>
-            <p style="font-size: 0.85rem; color: var(--text-secundario);">Aguardando o pagamento do cliente no app do banco...</p>
+        <!-- Painel de Inputs -->
+        <div class="painel-formulario">
+            <h2>Simulador Pix</h2>
+            <div class="limite-info">Limite disponível: <strong id="limite-val">R$ 3.000,00</strong></div>
            
-            <div id="qrcode-box"></div>
-            <h3 id="modal-pix-valor">R$ 0,00</h3>
-           
-            <button class="btn btn-pix-simular" id="btn-verificar-pix">Verificar se já foi Pago</button>
-            <button class="btn btn-secundario" id="btn-cancelar-pix">Cancelar Transação</button>
+            <div class="grupo-botoes">
+                <button class="btn-valor" onclick="selecionarValor(50)">R$ 50</button>
+                <button class="btn-valor" onclick="selecionarValor(100)">R$ 100</button>
+                <button class="btn-valor" onclick="selecionarValor(200)">R$ 200</button>
+                <button class="btn-valor" onclick="selecionarValor(500)">R$ 500</button>
+                <button class="btn-valor" onclick="selecionarValor(1000)">R$ 1.000</button>
+                <button class="btn-valor" onclick="selecionarValor(2000)">R$ 2.000</button>
+            </div>
+
+            <input type="number" id="valor-custom" class="input-personalizado" placeholder="Ou digite outro valor" oninput="atualizarValorCustom()">
+
+            <!-- Botão fixo de Pagamento/Zerar -->
+            <button class="btn-pagar-fixo" onclick="realizarPagamento()">Efetuar Pagamento / Zerar</button>
+
+            <!-- Display do QR Code -->
+            <div class="area-pix" id="container-pix" style="display: none;">
+                <p id="texto-valor-pix" style="font-weight: bold; color: var(--cor-pix);"></p>
+                <div id="qrcode"></div>
+                <div id="status-msg" class="status-pagamento"></div>
+            </div>
         </div>
     </div>
 
     <script>
-        // MUDAR COM O SEU LINK DEPOIS QUE ADICIONAR NA VERCEL
-        const URL_SERVIDOR_PYTHON = "https://seu-projeto-vercel.vercel.app/api/criar-pix";
+        let limiteMaximo = 3000;
+        let valorAtual = 100; // Valor padrão inicial
 
-        const bancoDeDadosSimulado = {
-            limiteTotal: 2500.00,
-            faturaAtual: parseFloat(localStorage.getItem('fatura_cartao')) || 0.00,
-            getLimiteDisponivel: function() { return this.limiteTotal - this.faturaAtual; }
-        };
-
-        const historicoDeTransacoes = JSON.parse(localStorage.getItem('historico_cartao')) || [];
-        let idPagamentoAsaas = null;
-        let transacaoPixPendente = null;
-
-        const txtLimiteTotal = document.getElementById('txt-limite-total');
-        const txtFaturaAtual = document.getElementById('txt-fatura-atual');
-        const txtLimiteDisponivel = document.getElementById('txt-limite-disponivel');
-        const inputEstabelecimento = document.getElementById('input-estabelecimento');
-        const inputValor = document.getElementById('input-valor');
-        const selectMetodo = document.getElementById('select-metodo');
-        const selectParcelas = document.getElementById('select-parcelas');
-        const boxParcelas = document.getElementById('box-parcelas');
-        const btnComprar = document.getElementById('btn-comprar');
-        const btnPagar = document.getElementById('btn-pagar');
-        const caixaMensagem = document.getElementById('caixa-mensagem');
-        const listaComprasVisual = document.getElementById('lista-compras');
-        const modalPix = document.getElementById('modal-pix');
-        const modalPixValor = document.getElementById('modal-pix-valor');
-
-        function tocarSom(freq, dur) {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator(); const gain = ctx.createGain();
-                osc.type = 'sine'; osc.frequency.setValueAtTime(freq, ctx.currentTime);
-                gain.gain.setValueAtTime(0.15, ctx.currentTime);
-                osc.connect(gain); gain.connect(ctx.destination);
-                osc.start(); setTimeout(() => { osc.stop(); ctx.close(); }, dur);
-            } catch(e){}
+        function selecionarValor(valor) {
+            valorAtual = valor;
+            document.getElementById('valor-custom').value = '';
+            gerarQrCode(valorAtual);
         }
 
-        selectMetodo.addEventListener('change', () => {
-            if (selectMetodo.value === 'pix') {
-                boxParcelas.style.opacity = '0.3'; selectParcelas.disabled = true;
-                btnComprar.innerText = "Gerar QR Code Pix Real";
+        function atualizarValorCustom() {
+            let val = parseFloat(document.getElementById('valor-custom').value);
+            if (!isNaN(val) && val > 0) {
+                valorAtual = val;
+                gerarQrCode(valorAtual);
             } else {
-                boxParcelas.style.opacity = '1'; selectParcelas.disabled = false;
-                btnComprar.innerText = "Pagar por Aproximação (NFC)";
-            }
-        });
-
-        function atualizarTela() {
-            txtLimiteTotal.innerText = bancoDeDadosSimulado.limiteTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            txtFaturaAtual.innerText = bancoDeDadosSimulado.faturaAtual.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            txtLimiteDisponivel.innerText = bancoDeDadosSimulado.getLimiteDisponivel().toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        }
-
-        function exibirNotificacao(texto, tipo) {
-            caixaMensagem.className = "mensagem " + tipo; caixaMensagem.innerText = texto;
-            setTimeout(() => { caixaMensagem.className = "mensagem"; }, 5000);
-        }
-
-        function atualizarHistoricoVisual() {
-            listaComprasVisual.innerHTML = "";
-            for (let i = historicoDeTransacoes.length - 1; i >= 0; i--) {
-                const t = historicoDeTransacoes[i];
-                const li = document.createElement('li'); li.className = 'transacao-item';
-                const detalhe = t.metodo === 'pix' ? '<span class="transacao-metodo metodo-pix">⚡ Pix Real</span>' : '<span class="transacao-metodo metodo-cartao">💳 Cartão</span>';
-                li.innerHTML = `<div class="transacao-info"><span class="transacao-estabelecimento">${t.loja}</span>${detalhe}</div><div><span class="transacao-valor cor-fatura">- ${t.valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>`;
-                listaComprasVisual.appendChild(li);
+                document.getElementById('container-pix').style.display = 'none';
             }
         }
 
-        btnComprar.addEventListener('click', async () => {
-            const loja = inputEstabelecimento.value.trim();
-            const valor = parseFloat(inputValor.value);
-            if (!loja || isNaN(valor) || valor <= 0) return exibirNotificacao("Preencha os campos!", "erro");
-
-            if (valor > bancoDeDadosSimulado.getLimiteDisponivel()) return exibirNotificacao("Sem limite!", "erro");
-
-            if (selectMetodo.value === 'cartao') {
-                tocarSom(950, 150);
-                bancoDeDadosSimulado.faturaAtual += valor;
-                historicoDeTransacoes.push({ loja, valorTotal: valor, metodo: 'cartao' });
-                exibirNotificacao("Aprovado por Aproximação!", "sucesso");
-                limparFormulario();
-            } else {
-                btnComprar.innerText = "Conectando ao Banco...";
-                btnComprar.disabled = true;
-
-                try {
-                    const resposta = await fetch(URL_SERVIDOR_PYTHON, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ valor: valor, descricao: `Venda em ${loja}` })
-                    });
-                   
-                    const dados = await resposta.json();
-                   
-                    if(dados.qr_code) {
-                        document.getElementById("qrcode-box").innerHTML = "";
-                        new QRCode(document.getElementById("qrcode-box"), { text: dados.qr_code, width: 200, height: 200 });
-                        modalPixValor.innerText = valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                       
-                        idPagamentoAsaas = dados.id;
-                        transacaoPixPendente = { loja, valorTotal: valor, metodo: 'pix' };
-                       
-                        modalPix.classList.add('ativo');
-                    } else {
-                        exibirNotificacao("Erro ao gerar Pix no banco Asaas.", "erro");
-                    }
-                } catch (erro) {
-                    exibirNotificacao("Erro de conexão com o servidor Python.", "erro");
-                } finally {
-                    btnComprar.innerText = "Gerar QR Code Pix Real";
-                    btnComprar.disabled = false;
-                }
-            }
-        });
-
-        document.getElementById('btn-verificar-pix').addEventListener('click', async () => {
-            if(!idPagamentoAsaas) return;
+        function gerarQrCode(valor) {
+            document.getElementById('container-pix').style.display = 'flex';
+            document.getElementById('texto-valor-pix').innerText = `QR Code Pix: R$ ${valor.toFixed(2)}`;
+            document.getElementById('status-msg').innerText = "";
            
-            try {
-                const checagem = await fetch(`${URL_SERVIDOR_PYTHON}?id=${idPagamentoAsaas}`);
-                const resultado = await checagem.json();
-               
-                if (resultado.status === 'approved') {
-                    tocarSom(1100, 100); setTimeout(() => { tocarSom(1400, 120); }, 120);
-                    bancoDeDadosSimulado.faturaAtual += transacaoPixPendente.valorTotal;
-                    historicoDeTransacoes.push(transacaoPixPendente);
-                    exibirNotificacao("Pix Confirmado pelo Banco! Saldo Atualizado.", "sucesso");
-                    modalPix.classList.remove('ativo');
-                    limparFormulario();
-                } else {
-                    exibirNotificacao("O banco informou que este Pix ainda não foi pago.", "erro");
-                }
-            } catch (e) {
-                exibirNotificacao("Erro ao checar status do Pix.", "erro");
-            }
-        });
+            document.getElementById('qrcode').innerHTML = "";
 
-        document.getElementById('btn-cancelar-pix').addEventListener('click', () => { modalPix.classList.remove('ativo'); });
-       
-        function limparFormulario() {
-            inputEstabelecimento.value = ""; inputValor.value = "";
-            localStorage.setItem('fatura_cartao', bancoDeDadosSimulado.faturaAtual);
-            localStorage.setItem('historico_cartao', JSON.stringify(historicoDeTransacoes));
-            atualizarTela(); atualizarHistoricoVisual();
+            let payloadSimulado = `00020126580014br.gov.bcb.pix0136jailsonsantos@email.com5204000053039865802BR5925JAILSON FREDDY DOS SANTOS6009RIO JANEIRO62070503***6304VALOR:${valor}`;
+
+            new QRCode(document.getElementById("qrcode"), {
+                text: payloadSimulado,
+                width: 120,
+                height: 120
+            });
         }
 
-        btnPagar.addEventListener('click', () => { bancoDeDadosSimulado.faturaAtual = 0; historicoDeTransacoes.length = 0; limparFormulario(); });
-        atualizarTela(); atualizarHistoricoVisual();
+        function realizarPagamento() {
+            let statusDiv = document.getElementById('status-msg');
+           
+            if (valorAtual > limiteMaximo) {
+                statusDiv.style.color = "var(--cor-erro)";
+                statusDiv.innerText = "Erro: Valor acima do limite do cartão!";
+                return;
+            }
+
+            limiteMaximo -= valorAtual;
+            document.getElementById('limite-val').innerText = `R$ ${limiteMaximo.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+           
+            statusDiv.style.color = "var(--cor-sucesso)";
+            statusDiv.innerText = `Pagamento de R$ ${valorAtual.toFixed(2)} efetuado com sucesso!`;
+        }
+
+        // Inicializa gerando o QR Code padrão de R$ 100 para o botão fixo funcionar logo de cara
+        gerarQrCode(valorAtual);
     </script>
+
 </body>
 </html>
